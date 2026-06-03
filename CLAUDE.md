@@ -1,150 +1,150 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+Android 客户端项目说明。
 
-## Build Commands
+## 技术栈
 
-```bash
-# Install dependencies
-flutter pub get
+| 类别 | 技术 |
+|------|------|
+| 语言 | Kotlin 2.0.x (K2 编译器) |
+| UI | Jetpack Compose + Material 3 |
+| 架构 | MVVM |
+| 依赖注入 | Hilt |
+| 网络 | Ktor Client |
+| 序列化 | Kotlinx Serialization |
+| 本地存储 | Room + DataStore |
+| 异步 | Coroutines + Flow |
+| 导航 | Compose Navigation |
 
-# Generate freezed/json_serializable code (required after modifying entities)
-flutter pub run build_runner build --delete-conflicting-outputs
-
-# Run the app
-flutter run
-
-# Run on specific device
-flutter run -d <device_id>
-
-# List available devices
-flutter devices
-
-# Build release APK (Android)
-flutter build apk --release
-
-# Build release iOS
-flutter build ios --release
-```
-
-## Test & Lint Commands
+## 构建命令
 
 ```bash
-# Run all tests
-flutter test
+# 构建 Debug APK
+./gradlew assembleDebug
 
-# Run specific test file
-flutter test test/path/to/test.dart
+# 构建 Release APK
+./gradlew assembleRelease
 
-# Run tests with coverage
-flutter test --coverage
+# 运行测试
+./gradlew test
 
-# Analyze code
-flutter analyze
+# 运行 Lint 检查
+./gradlew lint
 
-# Fix lint issues where possible
-dart fix --apply
+# 安装到设备
+./gradlew installDebug
+
+# 清理构建产物
+./gradlew clean
 ```
 
-## Architecture
-
-This project uses **Clean Architecture** with three layers:
+## 架构
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│  Presentation Layer (Pages, Widgets, Providers)              │
-│  → Uses Riverpod for state management                        │
-└─────────────────────────────┬───────────────────────────────┘
-                              │ calls UseCases
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Domain Layer (Entities, Repository Interfaces, UseCases)    │
-│  → Pure Dart, no Flutter dependencies                        │
-└─────────────────────────────┬───────────────────────────────┘
-                              │ implements Repository interfaces
-                              ▼
-┌─────────────────────────────────────────────────────────────┐
-│  Data Layer (Services, DataSources, Repository Impls)        │
-│  → Handles API, database, hardware                           │
-└─────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────┐
+│  UI Layer (Compose Screens, ViewModels)      │
+│  → 使用 StateFlow 管理 UI 状态               │
+└─────────────────────┬───────────────────────┘
+                      │ 调用 UseCase
+                      ▼
+┌─────────────────────────────────────────────┐
+│  Domain Layer (Entities, UseCases,           │
+│               Repository Interfaces)         │
+│  → 纯 Kotlin，无 Android 依赖                │
+└─────────────────────┬───────────────────────┘
+                      │ 实现 Repository
+                      ▼
+┌─────────────────────────────────────────────┐
+│  Data Layer (API, Database, Repository Impl) │
+│  → Ktor (网络) + Room (数据库)               │
+└─────────────────────────────────────────────┘
 ```
 
-### Key Patterns
+## 目录结构
 
-**Dependency Injection**: All dependencies are provided via Riverpod. Override providers in `main.dart`:
-```dart
-ProviderScope(
-  overrides: [
-    sharedPreferencesProvider.overrideWithValue(prefs),
-    databaseProvider.overrideWithValue(db),
-  ],
-  child: const App(),
-)
+```
+app/src/main/kotlin/tech/ti/social/
+├── core/           # 核心基础设施
+│   ├── network/    # Ktor 网络封装
+│   ├── storage/    # 存储封装 (待实现)
+│   ├── hardware/   # 硬件抽象层 (待实现)
+│   └── error/      # 错误处理 (待实现)
+│
+├── di/             # Hilt 依赖注入模块
+│   ├── AppModule.kt
+│   └── NetworkModule.kt
+│
+├── feature/        # 功能模块
+│   ├── main/       # 主入口/导航
+│   ├── auth/       # 认证 (待实现)
+│   ├── bluetooth/  # 蓝牙 (待实现)
+│   ├── audio/      # 音频 (待实现)
+│   └── ...
+│
+└── ui/             # 共享 UI 组件
+    └── theme/      # Material 3 主题
 ```
 
-**Error Handling**: Exceptions flow through three stages:
-1. Data layer throws `DioException`, `SQLiteException`, etc.
-2. Convert to `AppException` using `toAppException()` extension
-3. Map to `Failure` for domain layer (no technical details exposed to UI)
+## 模块依赖规则
 
-**Hardware Abstraction**: All hardware services implement `HardwareManager` interface:
-```dart
-abstract class HardwareManager {
-  String get hardwareType;
-  Stream<HardwareState> get state;
-  Future<Result<void>> initialize();
-  Future<Result<void>> release();
+Feature 模块之间**不直接依赖**，通过 `core/` 层的 Provider/Repository 接口通信。
+
+## 添加新功能模块
+
+1. 创建 `feature/<name>/` 目录
+2. 按三层结构组织：`data/`, `domain/`, `ui/`
+3. 在 `di/` 中添加对应的 Hilt Module
+4. 在 `feature/main/navigation/NavGraph.kt` 中注册路由
+
+## 状态管理
+
+```kotlin
+// ViewModel 使用 StateFlow
+class AuthViewModel : ViewModel() {
+    private val _state = MutableStateFlow(AuthState())
+    val state: StateFlow<AuthState> = _state.asStateFlow()
+    
+    fun login(email: String, password: String) {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true) }
+            // ...
+        }
+    }
+}
+
+// Compose 中使用 collectAsStateWithLifecycle()
+@Composable
+fun AuthScreen(viewModel: AuthViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    // ...
 }
 ```
 
-### Module Structure
+## 网络请求
 
-Each feature module follows this structure:
-```
-features/<name>/
-├── domain/
-│   ├── entities/        # Business objects (freezed classes)
-│   ├── repositories/    # Repository interfaces (abstract classes)
-│   └── usecases/        # Business logic operations
-├── data/                # Repository implementations, data sources
-└── presentation/
-    ├── providers/       # Riverpod StateNotifiers
-    └── pages/           # UI pages
-```
-
-**Module Dependency Rule**: Feature modules never depend on other feature modules directly. They communicate through `core/` layer providers.
-
-### Storage Layers
-
-| Layer | Technology | Use Case |
-|-------|------------|----------|
-| KV Store | `shared_preferences` | User settings, tokens |
-| Database | `sqflite` | Structured data, API cache |
-| Files | `path_provider` | Audio files, media |
-| Secure | `flutter_secure_storage` | Sensitive tokens |
-
-### Code Generation
-
-Entities use `freezed` for immutable classes with `copyWith`. After modifying any entity:
-```dart
-// Entity file
-@freezed
-class User with _$User {
-  const factory User({...}) = _User;
-  factory User.fromJson(Map<String, dynamic> json) => _$UserFromJson(json);
+```kotlin
+// 使用 Ktor Client
+class AuthRepositoryImpl(
+    private val client: HttpClient
+) : AuthRepository {
+    override suspend fun login(request: LoginRequest): Result<User> {
+        return try {
+            val response = client.post("auth/login") {
+                setBody(request)
+            }
+            Result.success(response.body())
+        } catch (e: Exception) {
+            Result.failure(e.toAppException())
+        }
+    }
 }
-
-// Run generator
-flutter pub run build_runner build --delete-conflicting-outputs
 ```
 
-Generated files (`*.freezed.dart`, `*.g.dart`) are excluded from analysis via `analysis_options.yaml`.
+## 待实现功能
 
-## Project Status
-
-Core infrastructure and domain interfaces are complete. Pending:
-- Data layer implementations for each feature
-- Hardware service implementations (BLE, Audio)
-- API client generation from server documentation
-
-See `docs/概要设计.md` for full design specification.
+- [ ] DataStore + Room 存储层封装
+- [ ] BLE 硬件抽象层
+- [ ] Audio 硬件抽象层
+- [ ] Auth 认证模块完整实现
+- [ ] 导航系统 (NavGraph)
+- [ ] 错误处理统一封装
