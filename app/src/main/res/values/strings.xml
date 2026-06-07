@@ -1,4 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Ti Social</string>
+
+    <!-- BluFi Provisioning -->
+    <string name="blufi_title">WiFi 配网</string>
+    <string name="blufi_start_scan">开始扫描设备</string>
+    <string name="blufi_scanning">正在扫描附近设备…</string>
+    <string name="blufi_connecting">正在连接设备…</string>
+    <string name="blufi_handshaking">正在进行安全握手…</string>
+    <string name="blufi_fetching_wifi">正在获取 WiFi 列表…</string>
+    <string name="blufi_sending_credentials">正在发送凭证…</string>
+    <string name="blufi_success">配网成功</string>
+    <string name="blufi_success_desc">设备已成功连接到 WiFi 网络：%s</string>
+    <string name="blufi_done">完成</string>
+    <string name="blufi_error">配网失败</string>
+    <string name="blufi_retry">重试</string>
+    <string name="blufi_permission_required">需要蓝牙权限</string>
+    <string name="blufi_permission_desc">WiFi 配网功能需要蓝牙和定位权限</string>
+    <string name="blufi_grant_permission">授予权限</string>
 </resources>
