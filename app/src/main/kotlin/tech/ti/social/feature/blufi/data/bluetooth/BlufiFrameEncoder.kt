@@ -21,6 +21,11 @@ class BlufiFrameEncoder {
     private var sequence: Int = 0
 
     /**
+     * Current sequence number (read-only, for AES IV construction).
+     */
+    val currentSequence: Int get() = sequence
+
+    /**
      * Encode a BluFi frame.
      */
     fun encode(type: Int, data: ByteArray? = null, encrypted: Boolean = false): ByteArray {

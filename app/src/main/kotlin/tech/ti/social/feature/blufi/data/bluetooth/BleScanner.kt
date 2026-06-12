@@ -3,7 +3,6 @@ package tech.ti.social.feature.blufi.data.bluetooth
 import android.Manifest
 import android.bluetooth.BluetoothManager
 import android.bluetooth.le.ScanCallback
-import android.bluetooth.le.ScanFilter
 import android.bluetooth.le.ScanResult
 import android.bluetooth.le.ScanSettings
 import android.content.Context
@@ -29,7 +28,7 @@ class BleScanner(
 
     private val bluetoothManager = context.getSystemService(Context.BLUETOOTH_SERVICE) as BluetoothManager
     private val bluetoothAdapter = bluetoothManager.adapter
-    private val scanner = bluetoothAdapter.bluetoothLeScanner
+    private val scanner = bluetoothAdapter?.bluetoothLeScanner
 
     private val discoveredDevices = mutableMapOf<String, BlufiDevice>()
 
@@ -64,7 +63,7 @@ class BleScanner(
     /**
      * Check if BLE is enabled on the device.
      */
-    fun isBluetoothEnabled(): Boolean = bluetoothAdapter.isEnabled
+    fun isBluetoothEnabled(): Boolean = bluetoothAdapter?.isEnabled == true
 
     /**
      * Start scanning for BluFi devices.
@@ -76,6 +75,11 @@ class BleScanner(
             return@callbackFlow
         }
 
+        if (bluetoothAdapter == null || scanner == null) {
+            close(IllegalStateException("Bluetooth not available on this device"))
+            return@callbackFlow
+        }
+
         if (!bluetoothAdapter.isEnabled) {
             close(IllegalStateException("Bluetooth is not enabled"))
             return@callbackFlow
@@ -83,12 +87,7 @@ class BleScanner(
 
         discoveredDevices.clear()
 
-        val filters = listOf(
-            ScanFilter.Builder()
-                .setDeviceName("Xiaozhi-Blufi")
-                .build()
-        )
-
+        // Scan all devices, filter by name in callback
         val settings = ScanSettings.Builder()
             .setScanMode(ScanSettings.SCAN_MODE_BALANCED)
             .build()
@@ -128,7 +127,7 @@ class BleScanner(
             }
         }
 
-        scanner.startScan(filters, settings, scanCallback)
+        scanner.startScan(null, settings, scanCallback)
         Log.d(TAG, "scan started")
 
         awaitClose {

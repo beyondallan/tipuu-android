@@ -12,6 +12,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
 import tech.ti.social.feature.blufi.data.bluetooth.BlufiGattAttributes.CONTROL_CHAR_UUID
 import tech.ti.social.feature.blufi.data.bluetooth.BlufiGattAttributes.DATA_CHAR_UUID
@@ -41,7 +42,7 @@ class BlufiDeviceConnector(
     /**
      * Flow of decoded messages received from the device.
      */
-    val messageFlow: Flow<BlufiMessage> = messageChannel.receiveFlow()
+    val messageFlow: Flow<BlufiMessage> = messageChannel.receiveAsFlow()
 
     /**
      * Connect to a BluFi device by MAC address.
@@ -109,13 +110,9 @@ class BlufiDeviceConnector(
                             enableNotification(gatt, controlCharacteristic!!)
                             enableNotification(gatt, dataCharacteristic!!)
 
-                            // Request MTU
+                            // Request MTU - continuation will resume in onMtuChanged
+                            Log.d(TAG, "service discovery complete, requesting MTU")
                             gatt.requestMtu(BlufiGattAttributes.MAX_MTU)
-
-                            Log.d(TAG, "service discovery complete, notifications enabled")
-                            if (continuation.isActive) {
-                                continuation.resume(Result.success(Unit))
-                            }
                         } else {
                             Log.e(TAG, "service discovery failed, status=$status")
                             if (continuation.isActive) {
@@ -128,6 +125,17 @@ class BlufiDeviceConnector(
 
                     override fun onMtuChanged(gatt: BluetoothGatt?, mtu: Int, status: Int) {
                         Log.d(TAG, "MTU changed to $mtu, status=$status")
+                        if (status == BluetoothGatt.GATT_SUCCESS) {
+                            if (continuation.isActive) {
+                                continuation.resume(Result.success(Unit))
+                            }
+                        } else {
+                            // MTU negotiation failed, but we can still proceed with default MTU
+                            Log.w(TAG, "MTU negotiation failed, proceeding with default MTU")
+                            if (continuation.isActive) {
+                                continuation.resume(Result.success(Unit))
+                            }
+                        }
                     }
 
                     override fun onCharacteristicChanged(

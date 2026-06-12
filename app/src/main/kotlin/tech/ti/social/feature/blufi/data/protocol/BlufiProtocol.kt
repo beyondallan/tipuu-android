@@ -167,7 +167,7 @@ class BlufiProtocol(
         // Send SSID
         val ssidBytes = ssid.toByteArray(StandardCharsets.UTF_8)
         val ssidData = if (securityEnabled) {
-            aesEncryptor.encrypt(ssidBytes, frameEncoder.hashCode()) // sequence will be managed by encoder
+            aesEncryptor.encrypt(ssidBytes, frameEncoder.currentSequence)
         } else {
             ssidBytes
         }
@@ -177,7 +177,7 @@ class BlufiProtocol(
         if (password.isNotEmpty()) {
             val passwordBytes = password.toByteArray(StandardCharsets.UTF_8)
             val pwdData = if (securityEnabled) {
-                aesEncryptor.encrypt(passwordBytes, frameEncoder.hashCode())
+                aesEncryptor.encrypt(passwordBytes, frameEncoder.currentSequence)
             } else {
                 passwordBytes
             }
