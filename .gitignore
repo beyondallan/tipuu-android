@@ -47,6 +47,13 @@ captures/
 ehthumbs.db
 Thumbs.db
 
+# Flutter / Dart (legacy, should not reappear)
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+pubspec.yaml
+*.dart
+
 # Secrets
 *.env
 *.env.local
